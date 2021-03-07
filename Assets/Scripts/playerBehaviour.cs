@@ -35,7 +35,6 @@ public class playerBehaviour : MonoBehaviour
         if (Input.GetKey(KeyCode.W))
         {
             moveDir = 1;
-            Debug.Log("W get");
 
             if (Input.GetKey(KeyCode.A))
             {
@@ -48,7 +47,6 @@ public class playerBehaviour : MonoBehaviour
         } else if (Input.GetKey(KeyCode.S))
         {
             moveDir = 3;
-            Debug.Log("S get");
 
             if (Input.GetKey(KeyCode.A))
             {
@@ -61,7 +59,6 @@ public class playerBehaviour : MonoBehaviour
         } else if (Input.GetKey(KeyCode.A))
         {
             moveDir = 5;
-            Debug.Log("A get");
 
             if (Input.GetKey(KeyCode.W))
             {
@@ -74,7 +71,6 @@ public class playerBehaviour : MonoBehaviour
         } else if (Input.GetKey(KeyCode.D))
         {
             moveDir = 7;
-            Debug.Log("D get");
 
             if (Input.GetKey(KeyCode.W))
             {
