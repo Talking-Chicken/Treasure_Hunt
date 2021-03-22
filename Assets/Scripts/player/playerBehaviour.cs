@@ -18,14 +18,14 @@ public class playerBehaviour : MonoBehaviour
 
     //item interaction
     bool handEmpty; //this is used to check whether player picked up the item. HOWEVER now it's useless
-    bool pickedUp;
+    bool isPutDown = true;
     bool isUsing;
 
     public float sightDist; //raycasting distance
     Vector3 dir; //direction of player that is facing at
 
     GameObject detectingItem; //detectingItem is the object that is in range to pick up
-    GameObject item; //item is the object that holding in hand
+    public GameObject item; //item is the object that holding in hand
 
     //back pack
     public List<GameObject> backPack = new List<GameObject>();
@@ -45,7 +45,16 @@ public class playerBehaviour : MonoBehaviour
     bool drawingOuline; //to prevent drawing outline multiple times
     [SerializeField]
     [Range(0.1f,5.0f)]
-    public float outlineThickness; //useless right now....
+    public float outlineThickness; //the thickness of the outline
+
+    bool outlineDrawed = false;
+
+    //talking with NPCs
+    public List<List<string>> dialogues = new List<List<string>>();
+
+    public int talkingWith;
+
+    public bool isClockGetted = false;
 
     // Start is called before the first frame update
     void Start()
@@ -71,12 +80,21 @@ public class playerBehaviour : MonoBehaviour
         putDownItem();
         searchBackPack();
         itemPosition();
+
+        // set item stats when NOT in backpack searching
+        if (!backPackSearch)
+        {
+            if (outline != null)
+            {
+                outline.SetActive(false);
+            }
+        }
     }
 
     private void FixedUpdate()
     {
         checkKeys();
-        if (!backPackSearch)
+        if (!backPackSearch && !gameManager.isSittingInChair)
         {
             handleMovement();
         }
@@ -173,19 +191,19 @@ public class playerBehaviour : MonoBehaviour
                 break;
 
             case 2:
-                myBody.velocity = new Vector3(-0.5f, 0.5f) * speed;
+                myBody.velocity = new Vector3(-0.75f, 0.75f) * speed;
                 break;
 
             case 4:
-                myBody.velocity = new Vector3(0.5f, 0.5f) * speed;
+                myBody.velocity = new Vector3(0.75f, 0.75f) * speed;
                 break;
 
             case 6:
-                myBody.velocity = new Vector3(-0.5f, -0.5f) * speed;
+                myBody.velocity = new Vector3(-0.75f, -0.75f) * speed;
                 break;
 
             case 8:
-                myBody.velocity = new Vector3(0.5f, -0.5f) * speed;
+                myBody.velocity = new Vector3(0.75f, -0.75f) * speed;
                 break;
 
             case 0:
@@ -197,7 +215,7 @@ public class playerBehaviour : MonoBehaviour
     public void detectItem()
     {
         RaycastHit2D hit = Physics2D.Raycast(transform.position, dir, sightDist);
-        Debug.DrawRay(transform.position, dir, Color.red);
+        //Debug.DrawRay(transform.position, dir, Color.red);
         if (hit.collider != null)
         {
             if (hit.collider.tag == "item")
@@ -218,15 +236,56 @@ public class playerBehaviour : MonoBehaviour
         }
     }
 
+    public GameObject detectNPC()
+    {
+        RaycastHit2D hit = Physics2D.Raycast(transform.position, dir, sightDist);
+        Debug.DrawRay(transform.position, dir, Color.blue);
+        if (hit.collider != null)
+        {
+            if (hit.collider.tag == "npc")
+            {
+                return hit.collider.gameObject;
+            } else
+            {
+                return this.gameObject;
+            }
+        } else
+        {
+            return this.gameObject;
+        }
+    }
+
+    public GameObject detectChair()
+    {
+        RaycastHit2D hit = Physics2D.Raycast(transform.position, dir, sightDist);
+        Debug.DrawRay(transform.position, dir, Color.blue);
+        if (hit.collider != null)
+        {
+            if (hit.collider.tag == "chair")
+            {
+                return hit.collider.gameObject;
+            }
+            else
+            {
+                return this.gameObject;
+            }
+        }
+        else
+        {
+            return this.gameObject;
+        }
+    }
+
     void pickUpItem()
     {
         if (detectingItem != null)
         {
-            if (Input.GetKeyUp(KeyCode.Space) && item == null)
+            if (Input.GetKeyUp(KeyCode.Space) && item == null && isPutDown)
             {
                 item = detectingItem;
                 item.layer = 2;
                 detectingItem = null;
+                isPutDown = false;
             }
             putDownItem();
         }
@@ -244,13 +303,15 @@ public class playerBehaviour : MonoBehaviour
         {
             if (backPack.Count >= maxCapacity)
             {
-                //Debug.Log("max");
                 gameManager.showPopText("My backpack is full");
             } else
             {
                 //add item to the backpack
                 backPack.Add(item);
+                isPutDown = true;
                 gameManager.showPopText(item.name + " is in backpack");
+                //when item is in the backpack, it is no longer in looping list
+                gameManager.deleteFromLoop(item);
                 //when item is in the backpack, it is not holding in hand
                 item = null;
                 handEmpty = true;
@@ -301,13 +362,17 @@ public class playerBehaviour : MonoBehaviour
                 element++;
             }
 
-            drawOutline(backPack[element], element);
-            takeOutFromPack(backPack[element], element);
+            if (backPack.Count > 0)
+            {
+                drawOutline(backPack[element], element);
+                takeOutFromPack(backPack[element], element);
+            }
 
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 backPackSearch = false;
                 indicator.SetActive(false);
+                drawingOuline = false;
             }
         }
     }
@@ -317,22 +382,24 @@ public class playerBehaviour : MonoBehaviour
         Vector3 pos = new Vector3(g.gameObject.transform.position.x - 1, g.gameObject.transform.position.y);
         if (!drawingOuline) {
             indicator.SetActive(true);
-            /*outline = Instantiate(g, pos, g.transform.rotation);
-            SpriteRenderer sr = outline.gameObject.GetComponent<SpriteRenderer>();
-            outline.transform.localScale *= outlineThickness;
-            outline.transform.position = g.transform.position;
-            sr.color = Color.black;
-            sr.sortingOrder = 20;*/
+            //outline = Instantiate(g, pos, g.transform.rotation);
+            //outline.SetActive(true);
+            //SpriteRenderer sr = outline.GetComponent<SpriteRenderer>();
+            //sr.color = Color.white;
+            if (!outlineDrawed)
+            {
+                //outline.transform.localScale *= outlineThickness;
+                //outlineDrawed = true;
+            }
             indicator.transform.position = pos;
             drawingOuline = true;
         } else
         {
             if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.S))
             {
-                //outline.transform.position = g.transform.position;
+                //outline.SetActive(true);
+                //outline.transform.position = pos;
                 indicator.transform.position = pos;
-                    //indicator.SetActive(false);
-                    //drawingOuline = false;
             }
         }
     }
@@ -349,15 +416,24 @@ public class playerBehaviour : MonoBehaviour
                 element = 0;
                 backPackSearch = false;
                 indicator.SetActive(false);
-            } else if (item != null)
+
+                //when taken out from backpack the object back to loop list
+                gameManager.addToLoop(g, i);
+
+            } /*else if (item != null)
             {
                 GameObject temp = item;
                 item = g;
                 backPack[i] = temp;
                 element = 0;
+                backPack.Remove(g);
                 backPackSearch = false;
                 indicator.SetActive(false);
-            }
+
+                //when taken out from backpack the object back to loop list, the object that switched to the backpack needs to be removed from loop list
+                gameManager.addToLoop(g, i);
+                gameManager.deleteFromLoop(temp);
+            }*/
         }
     }
 
@@ -370,7 +446,7 @@ public class playerBehaviour : MonoBehaviour
         }
     }
 
-    //interaction between keys and gates
+    //interaction between keys and gates [since they cannot be destroyed from loop list, I need to make them inactive]
     void keyToGate(Collision2D c)
     {
         if (item != null)
@@ -380,8 +456,10 @@ public class playerBehaviour : MonoBehaviour
                 case "Red Key":
                     if (c.gameObject.name == "Gate Red")
                     {
-                        Destroy(c.gameObject);
-                        Destroy(item);
+                        c.gameObject.SetActive(false);
+                        item.SetActive(false);
+                        //Destroy(c.gameObject);
+                        //Destroy(item);
                         item = null;
                         handEmpty = true;
                         gameManager.showPopText("Red gate opened");
@@ -391,8 +469,10 @@ public class playerBehaviour : MonoBehaviour
                 case "Blue Key":
                     if (c.gameObject.name == "Gate Blue")
                     {
-                        Destroy(c.gameObject);
-                        Destroy(item);
+                        c.gameObject.SetActive(false);
+                        item.SetActive(false);
+                        //Destroy(c.gameObject);
+                        //Destroy(item);
                         item = null;
                         handEmpty = true;
                         gameManager.showPopText("Blue gate opened");
@@ -402,8 +482,10 @@ public class playerBehaviour : MonoBehaviour
                 case "Yellow Key":
                     if (c.gameObject.name == "Gate Yellow")
                     {
-                        Destroy(c.gameObject);
-                        Destroy(item);
+                        c.gameObject.SetActive(false);
+                        item.SetActive(false);
+                        //Destroy(c.gameObject);
+                        //Destroy(item);
                         item = null;
                         handEmpty = true;
                         gameManager.showPopText("Yellow gate opened");
@@ -413,8 +495,10 @@ public class playerBehaviour : MonoBehaviour
                 case "Green Key":
                     if (c.gameObject.name == "Gate Green")
                     {
-                        Destroy(c.gameObject);
-                        Destroy(item);
+                        c.gameObject.SetActive(false);
+                        item.SetActive(false);
+                        //Destroy(c.gameObject);
+                        //Destroy(item);
                         item = null;
                         handEmpty = true;
                         gameManager.showPopText("Green gate opened");
@@ -424,11 +508,26 @@ public class playerBehaviour : MonoBehaviour
                 case "Pink Key":
                     if (c.gameObject.name == "Gate Pink")
                     {
-                        Destroy(c.gameObject);
-                        Destroy(item);
+                        c.gameObject.SetActive(false);
+                        item.SetActive(false);
+                        //Destroy(c.gameObject);
+                        //Destroy(item);
                         item = null;
                         handEmpty = true;
                         gameManager.showPopText("Pink gate opened");
+                    }
+                    break;
+
+                case "coin":
+                    Debug.Log("1");
+                    if (c.gameObject.name == "test")
+                    {
+                        Debug.Log("111");
+                        item.SetActive(false);
+                        item = null;
+                        handEmpty = true;
+                        gameManager.showPopText("clock Shows at left conor");
+                        isClockGetted = true;
                     }
                     break;
             }
@@ -438,9 +537,10 @@ public class playerBehaviour : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.tag == "gate")
+        if (collision.gameObject.tag == "gate" || collision.gameObject.tag == "npc")
         {
             keyToGate(collision);
+            isPutDown = true;
         }
     }
 
@@ -448,11 +548,18 @@ public class playerBehaviour : MonoBehaviour
     {
         if (collision.gameObject.name == "coin")
         {
-            Debug.Log("found");
             gameManager.showPopText("YOU FIND THE COIN!");
         }
     }
 
+    private void OnTriggerExit2D(Collider2D collision)
+    {
+        if (collision.tag == "item")
+        {
+            isPutDown = true;
+            Debug.Log("out");
+        }
+    }
     /*
     void handleMovement()
     {

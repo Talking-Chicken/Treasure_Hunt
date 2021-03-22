@@ -7,7 +7,8 @@ TagManager:
   - wall
   - item
   - gate
-  - trigger
+  - npc
+  - chair
   layers:
   - Default
   - TransparentFX

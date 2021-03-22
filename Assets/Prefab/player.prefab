@@ -13,10 +13,6 @@ GameObject:
   - component: {fileID: 3644401533750079999}
   - component: {fileID: 3644401533750079998}
   - component: {fileID: 3644401533750079997}
-  - component: {fileID: 3644401533750079994}
-  - component: {fileID: 3644401533750079995}
-  - component: {fileID: 3644401533750079988}
-  - component: {fileID: 281659089}
   m_Layer: 0
   m_Name: player
   m_TagString: Player
@@ -147,6 +143,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5947367c3177023428b51e09a1f14103, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gameManager: {fileID: 0}
   speed: 4
   sightDist: 3
   backPack: []
@@ -154,67 +151,4 @@ MonoBehaviour:
   backPackBG: {fileID: 0}
   indicator: {fileID: 0}
   gapBetweenItems: 0.65
-  outlineThickness: 0
---- !u!114 &3644401533750079994
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3644401533750079996}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dfb4c30e8f2fea845b55ba25aadcf773, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &3644401533750079995
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3644401533750079996}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9c95a288718ff19409ccc2be40a765d2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  connectingBlock: {fileID: 0}
-  speed: 13
---- !u!114 &3644401533750079988
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3644401533750079996}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2bd440b2024f4fa47ab12c6404a4021b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  textBox: {fileID: 0}
-  layerCheck: {fileID: 0}
-  l1: {fileID: 3644401533750079996}
-  l2: {fileID: 0}
-  l3: {fileID: 0}
---- !u!114 &281659089
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3644401533750079996}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1985bb602562d714eb7d9cb2bb54e859, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  accessingPack: 0
-  items: []
-  maxItems: 4
-  itemsX: 25
-  itemsY1: 0
-  itemsY2: 2
-  itemsY3: 4
-  itemsY4: 6
+  outlineThickness: 2.13
