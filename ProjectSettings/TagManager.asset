@@ -9,6 +9,9 @@ TagManager:
   - gate
   - npc
   - chair
+  - trigger
+  - sea
+  - bound
   layers:
   - Default
   - TransparentFX
@@ -43,6 +46,9 @@ TagManager:
   - 
   - 
   m_SortingLayers:
+  - name: floor
+    uniqueID: 3269644389
+    locked: 0
   - name: Default
     uniqueID: 0
     locked: 0

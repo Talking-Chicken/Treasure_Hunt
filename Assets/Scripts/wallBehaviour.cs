@@ -2,16 +2,16 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Item : MonoBehaviour
+public class wallBehaviour : MonoBehaviour
 {
-    public bool inPackage;
-    public bool onHand;
-
     // Start is called before the first frame update
     void Start()
     {
-        inPackage = false;
-        onHand = false;
+        // make the wall transparent
+        Color temp;
+        temp = GetComponent<SpriteRenderer>().color;
+        temp.a = 0f;
+        GetComponent<SpriteRenderer>().color = temp;
     }
 
     // Update is called once per frame
@@ -19,10 +19,4 @@ public class Item : MonoBehaviour
     {
         
     }
-
-    void showInPackage()
-    {
-        return;
-    }
-
 }

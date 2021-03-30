@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class playerBehaviour : MonoBehaviour
 {
@@ -12,14 +13,16 @@ public class playerBehaviour : MonoBehaviour
     public float speed;
 
     Rigidbody2D myBody;
-    BoxCollider2D myCollider;
 
     float moveDir = 1;
 
+    //animation
+    Animator myAnim;
+    SpriteRenderer myRend;
+
     //item interaction
-    bool handEmpty; //this is used to check whether player picked up the item. HOWEVER now it's useless
-    bool isPutDown = true;
-    bool isUsing;
+    public bool handEmpty; //this is used to check whether player picked up the item. HOWEVER now it's useless
+    public bool isPutDown = true;
 
     public float sightDist; //raycasting distance
     Vector3 dir; //direction of player that is facing at
@@ -41,7 +44,6 @@ public class playerBehaviour : MonoBehaviour
 
     bool backPackSearch; //to check whether payer is looking at back pack
     int element; //this indicates which element player is looking at inside the back pack
-    int indicatorNum; //to check whether player switch to another object to look at inside the back pack. HOWEVER useless right now
     bool drawingOuline; //to prevent drawing outline multiple times
     [SerializeField]
     [Range(0.1f,5.0f)]
@@ -54,13 +56,24 @@ public class playerBehaviour : MonoBehaviour
 
     public int talkingWith;
 
+    public bool detectedNPC = false; //this become true when raycasting is detecting a NPC
+
     public bool isClockGetted = false;
 
+    //to help player put down things when they already putted things down
+    bool countDown = false;
+    float resetPutdownTime = 2;
+    float putdownTime;
+
+    //keeping the score
+    public int score = 0; //this shows how many times player loops
     // Start is called before the first frame update
     void Start()
     {
         myBody = gameObject.GetComponent<Rigidbody2D>();
-        myCollider = gameObject.GetComponent<BoxCollider2D>();
+        //myCollider = gameObject.GetComponent<BoxCollider2D>();
+        myAnim = gameObject.GetComponent<Animator>();
+        myRend = gameObject.GetComponent<SpriteRenderer>();
 
         handEmpty = true;
         //pickedUp = false;
@@ -69,6 +82,10 @@ public class playerBehaviour : MonoBehaviour
         backPackSearch = false;
         element = 0;
         drawingOuline = false;
+
+        putdownTime = resetPutdownTime;
+
+        DontDestroyOnLoad(gameObject);
     }
 
     // Update is called once per frame
@@ -78,6 +95,7 @@ public class playerBehaviour : MonoBehaviour
         pickUpItem();
         putInPack();
         putDownItem();
+        helpPutdownItem();
         searchBackPack();
         itemPosition();
 
@@ -172,44 +190,66 @@ public class playerBehaviour : MonoBehaviour
     //8 directions movement
     void handleMovement()
     {
+        resetAnimation();
+        myRend.flipX = false;
+
         switch (moveDir)
         {
             case 1:
                 myBody.velocity = new Vector3(0, 1) * speed;
+                myAnim.SetBool("goingBack", true);
                 break;
             
             case 3:
                 myBody.velocity = new Vector3(0, -1) * speed;
+                myAnim.SetBool("goingFront", true);
                 break;
 
             case 5:
                 myBody.velocity = new Vector3(-1, 0) * speed;
+                myAnim.SetBool("goingLeftFront", true);
                 break;
 
             case 7:
                 myBody.velocity = new Vector3(1, 0) * speed;
+                myAnim.SetBool("goingLeftFront", true);
+                myRend.flipX = true;
                 break;
 
             case 2:
                 myBody.velocity = new Vector3(-0.75f, 0.75f) * speed;
+                myAnim.SetBool("goingLeftBack", true);
                 break;
 
             case 4:
                 myBody.velocity = new Vector3(0.75f, 0.75f) * speed;
+                myAnim.SetBool("goingLeftBack", true);
+                myRend.flipX = true;
                 break;
 
             case 6:
                 myBody.velocity = new Vector3(-0.75f, -0.75f) * speed;
+                myAnim.SetBool("goingLeftFront", true);
                 break;
 
             case 8:
                 myBody.velocity = new Vector3(0.75f, -0.75f) * speed;
+                myAnim.SetBool("goingLeftFront", true);
+                myRend.flipX = true;
                 break;
 
             case 0:
                 myBody.velocity = new Vector3(0, 0);
                 break;
         }
+    }
+
+    void resetAnimation()
+    {
+        myAnim.SetBool("goingBack", false);
+        myAnim.SetBool("goingFront", false);
+        myAnim.SetBool("goingLeftBack", false);
+        myAnim.SetBool("goingLeftFront", false);
     }
 
     public void detectItem()
@@ -222,11 +262,11 @@ public class playerBehaviour : MonoBehaviour
             {
                 if (detectingItem == null)
                 {
-                    //Debug.Log(hit.collider.gameObject.name);
+                    Debug.Log(hit.collider.gameObject.name);
                     detectingItem = hit.collider.gameObject;
                 } else if (hit.collider.gameObject != detectingItem)
                 {
-                    //Debug.Log(hit.collider.gameObject.name);
+                    Debug.Log(hit.collider.gameObject.name);
                     detectingItem = hit.collider.gameObject;
                 }
             }
@@ -244,13 +284,16 @@ public class playerBehaviour : MonoBehaviour
         {
             if (hit.collider.tag == "npc")
             {
+                detectedNPC = true;
                 return hit.collider.gameObject;
             } else
             {
+                detectedNPC = false;
                 return this.gameObject;
             }
         } else
         {
+            detectedNPC = false;
             return this.gameObject;
         }
     }
@@ -263,15 +306,18 @@ public class playerBehaviour : MonoBehaviour
         {
             if (hit.collider.tag == "chair")
             {
+                gameManager.detectedChair = true;
                 return hit.collider.gameObject;
             }
             else
             {
+                gameManager.detectedChair = false;
                 return this.gameObject;
             }
         }
         else
         {
+            gameManager.detectedChair = false;
             return this.gameObject;
         }
     }
@@ -330,12 +376,31 @@ public class playerBehaviour : MonoBehaviour
 
     void putDownItem() //here's problem that player needs to hold SPACE for a while to leave the item
     {
-        if (item != null && !handEmpty)
+        if (item != null && !handEmpty && !gameManager.detectedChair && !detectedNPC)
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 item.layer = 8;
                 item = null;
+            }
+        }
+    }
+
+    void helpPutdownItem() //to help player put down things, when they already putted things down, but isPutdown is still not true
+    {
+        if (item == null && !isPutDown && Input.GetKeyUp(KeyCode.Space))
+        {
+            countDown = true;
+        }
+
+        if (countDown)
+        {
+            putdownTime -= Time.deltaTime;
+            if (putdownTime <= 0)
+            {
+                isPutDown = true;
+                putdownTime = resetPutdownTime;
+                countDown = false;
             }
         }
     }
@@ -346,8 +411,6 @@ public class playerBehaviour : MonoBehaviour
         {
             backPackSearch = true;
             indicator.SetActive(true);
-            //Debug.Log(element);
-            //Debug.Log(backPackSearch);
             gameManager.showPopText("W and S to select items" + "\n" + "Q to take the item out" + "\n" + "ESC to exit backpack");
         }
 
@@ -379,7 +442,7 @@ public class playerBehaviour : MonoBehaviour
 
     void drawOutline(GameObject g, int i) //draw outline for items in back pack that player is looking at
     {
-        Vector3 pos = new Vector3(g.gameObject.transform.position.x - 1, g.gameObject.transform.position.y);
+        Vector3 pos = new Vector3(g.gameObject.transform.position.x - 1.2f, g.gameObject.transform.position.y);
         if (!drawingOuline) {
             indicator.SetActive(true);
             //outline = Instantiate(g, pos, g.transform.rotation);
@@ -446,7 +509,7 @@ public class playerBehaviour : MonoBehaviour
         }
     }
 
-    //interaction between keys and gates [since they cannot be destroyed from loop list, I need to make them inactive]
+    //interaction between items and their interactive objects, not only key and gates
     void keyToGate(Collision2D c)
     {
         if (item != null)
@@ -458,8 +521,6 @@ public class playerBehaviour : MonoBehaviour
                     {
                         c.gameObject.SetActive(false);
                         item.SetActive(false);
-                        //Destroy(c.gameObject);
-                        //Destroy(item);
                         item = null;
                         handEmpty = true;
                         gameManager.showPopText("Red gate opened");
@@ -471,8 +532,6 @@ public class playerBehaviour : MonoBehaviour
                     {
                         c.gameObject.SetActive(false);
                         item.SetActive(false);
-                        //Destroy(c.gameObject);
-                        //Destroy(item);
                         item = null;
                         handEmpty = true;
                         gameManager.showPopText("Blue gate opened");
@@ -484,8 +543,6 @@ public class playerBehaviour : MonoBehaviour
                     {
                         c.gameObject.SetActive(false);
                         item.SetActive(false);
-                        //Destroy(c.gameObject);
-                        //Destroy(item);
                         item = null;
                         handEmpty = true;
                         gameManager.showPopText("Yellow gate opened");
@@ -497,8 +554,6 @@ public class playerBehaviour : MonoBehaviour
                     {
                         c.gameObject.SetActive(false);
                         item.SetActive(false);
-                        //Destroy(c.gameObject);
-                        //Destroy(item);
                         item = null;
                         handEmpty = true;
                         gameManager.showPopText("Green gate opened");
@@ -510,8 +565,6 @@ public class playerBehaviour : MonoBehaviour
                     {
                         c.gameObject.SetActive(false);
                         item.SetActive(false);
-                        //Destroy(c.gameObject);
-                        //Destroy(item);
                         item = null;
                         handEmpty = true;
                         gameManager.showPopText("Pink gate opened");
@@ -519,10 +572,8 @@ public class playerBehaviour : MonoBehaviour
                     break;
 
                 case "coin":
-                    Debug.Log("1");
-                    if (c.gameObject.name == "test")
+                    if (c.gameObject.name == "collisionArea(test)")
                     {
-                        Debug.Log("111");
                         item.SetActive(false);
                         item = null;
                         handEmpty = true;
@@ -557,7 +608,7 @@ public class playerBehaviour : MonoBehaviour
         if (collision.tag == "item")
         {
             isPutDown = true;
-            Debug.Log("out");
+            //Debug.Log("out");
         }
     }
     /*

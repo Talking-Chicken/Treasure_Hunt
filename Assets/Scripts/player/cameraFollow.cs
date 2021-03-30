@@ -38,6 +38,7 @@ public class cameraFollow : MonoBehaviour
         camSize = mainCam.orthographicSize;
         camRatio = (xMax + camSize) / 8.0f;
 
+        DontDestroyOnLoad(gameObject);
     }
 
     // Update is called once per frame

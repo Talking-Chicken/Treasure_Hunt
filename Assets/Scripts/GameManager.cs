@@ -30,11 +30,11 @@ public class GameManager : MonoBehaviour
     public float loopTimeReset;
     float loopTimeNormReset;
     float loopTimeChairReset;
+    float loopTimeRevertReset;
     float loopTime;
     bool loopTimeCountDown = false;
 
-    [SerializeField]
-    int clockResetTimeHr, clockResetTimeMin, clockStartTimeHr, clockStartTimeMin, clockEndTimeHr, clockEndTimeMin;
+    public int clockResetTimeHr, clockResetTimeMin, clockStartTimeHr, clockStartTimeMin, clockEndTimeHr, clockEndTimeMin;
 
     //time loop clock showing on screen
     public GameObject clockText;
@@ -46,6 +46,16 @@ public class GameManager : MonoBehaviour
     public playerBehaviour player;
     GameObject chair;
     public bool isSittingInChair = false;
+    public bool detectedChair = false; //when raycast detect the chair it becomes true
+
+    //time loop shows the death screen
+    public GameObject deathScreen;
+    Animator screenAnim;
+
+    public GameObject clockReverse;
+    public Text clockReverseComponent;
+
+    public bool isReseting = false;
 
     // Start is called before the first frame update
     void Start()
@@ -58,6 +68,7 @@ public class GameManager : MonoBehaviour
         loopTime = loopTimeReset;
         loopTimeNormReset = loopTimeReset;
         loopTimeChairReset = loopTimeNormReset / 2;
+        loopTimeRevertReset = loopTimeNormReset / 12;
         clockStartTimeHr = clockResetTimeHr;
         clockStartTimeMin = clockResetTimeMin;
 
@@ -68,6 +79,10 @@ public class GameManager : MonoBehaviour
             //GameObject go = Instantiate(key, initialPos[i], gameObject.transform.rotation);
             //go.GetComponent<SpriteRenderer>().color = Color.white;
         }
+
+        //screen black out
+        screenAnim = deathScreen.gameObject.GetComponent<Animator>();
+        clockReverseComponent.text = clockTextComponent.text;
     }
 
     // Update is called once per frame
@@ -88,12 +103,16 @@ public class GameManager : MonoBehaviour
         //time loop
         clockCountDown();
 
-        if (clockStartTimeHr == clockEndTimeHr && clockStartTimeMin == clockEndTimeMin)
+        if (isReseting)
         {
             isSittingInChair = false;
             resetPos();
-            clockStartTimeHr = clockResetTimeHr;
-            clockStartTimeMin = clockResetTimeMin;
+            //clockStartTimeHr = clockResetTimeHr;
+            //clockStartTimeMin = clockResetTimeMin;
+
+            //screen black out also need to reset
+            deathScreen.SetActive(true);
+            screenAnim.SetInteger("time", 0);
         }
 
         if (player.isClockGetted)
@@ -102,6 +121,9 @@ public class GameManager : MonoBehaviour
         }
 
         sittingInChair();
+        screenBlackOut();
+        showRevetTime();
+        clockReverseComponent.text = clockTextComponent.text;
     }
 
     public void showPopText(string textToShow)
@@ -149,7 +171,7 @@ public class GameManager : MonoBehaviour
         if (loopTimeCountDown)
         {
             loopTime -= Time.deltaTime;
-            if (loopTime <= 0) //if loopTime ends, 1 minute is spent, which means clock time + 1 min
+            if (loopTime <= 0 && !isReseting) //if loopTime ends, 1 minute is spent, which means clock time + 1 min
             {
                 if (clockStartTimeMin < 59)
                 {
@@ -170,11 +192,18 @@ public class GameManager : MonoBehaviour
         if (player.item != null)
         {
             player.item = null;
+            player.handEmpty = true;
+            player.isPutDown = true;
         }
         for (int i = 0; i < loopingObjs.Count; i++)
         {
             loopingObjs[i].SetActive(true);
             loopingObjs[i].transform.position = initialPos[i];
+
+            if (loopingObjs[i].tag == "item") //set all items to item layer
+            {
+                loopingObjs[i].layer = 8;
+            }
         }
         loopTimeReset = loopTimeNormReset;
     }
@@ -197,7 +226,7 @@ public class GameManager : MonoBehaviour
         if (player.detectChair().tag == "chair")
         {
             chair = player.detectChair().gameObject;
-            if (Input.GetKeyDown(KeyCode.E))
+            if (Input.GetKeyDown(KeyCode.Space))
             {
                 isSittingInChair = true;
             }
@@ -211,6 +240,52 @@ public class GameManager : MonoBehaviour
             {
                 loopTimeReset = loopTimeNormReset;
                 isSittingInChair = false;
+            }
+        }
+    }
+
+    void screenBlackOut()
+    {
+        if (clockEndTimeHr - clockStartTimeHr <= 1)
+        {
+            deathScreen.SetActive(true);
+            screenAnim.SetInteger("time", clockStartTimeMin);
+            if (clockStartTimeMin == clockEndTimeMin)
+            {
+                isReseting = true;
+            }
+        }
+    }
+
+    void showRevetTime()
+    {
+        if (isReseting)
+        {
+            screenAnim.SetBool("resetComplete", true);
+            clockReverse.SetActive(true);
+            loopTimeReset = loopTimeRevertReset;
+            if (loopTime <= 0)
+            {
+                if (clockStartTimeMin >= 0)
+                {
+                    clockStartTimeMin--;
+                }
+                else
+                {
+                    clockStartTimeHr--;
+                    clockStartTimeMin = 59;
+                }
+                loopTime = loopTimeReset;
+            }
+
+            if (clockStartTimeHr <= 10 && clockStartTimeMin == 0)
+            {
+                isReseting = false;
+                clockReverse.SetActive(false);
+                loopTimeReset = loopTimeNormReset;
+                screenAnim.SetBool("resetComplete", false);
+                deathScreen.SetActive(false);
+                player.score++;
             }
         }
     }
