@@ -129,6 +129,8 @@ public class dialogue : MonoBehaviour
         testDialogue.Add("and 1 at the south in the ocean");
         testDialogue.Add("if you feel tired");
         testDialogue.Add("press space to sit in chair");
+        testDialogue.Add("remember, your bag is in another time line");
+        testDialogue.Add("items inside will not experience the time loop");
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
